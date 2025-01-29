@@ -1,6 +1,8 @@
 node_modules
 cypress/screenshots
 cypress/videos
+cypress/reports
 allure-report
 allure-results
+
 .env

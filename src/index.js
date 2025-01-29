@@ -3,6 +3,7 @@
 const program = require('commander')
 const fs = require('fs')
 const { readAllureReport } = require('./allureReport')
+const { readMochaReport } = require('./mochaReport')
 const { sendWebhook } = require('./ms-teamsWebhook')
 
 let version
@@ -21,6 +22,11 @@ program.version(version, '-v, --version')
 program
 	.option('--verbose', 'show log output')
 	.option(
+		'--report-type [type]',
+		'define the type of report [allure, mocha]',
+		'allure'
+	)
+	.option(
 		'--report-path [type]',
 		'define the path of allure report file',
 		'./allure-report/widgets/status-chart.json'
@@ -33,6 +39,7 @@ program
 	.option('--report-url [type]', 'provide the link for the Test Report', '')
 program.parse(process.argv)
 
+const reportType = program.reportType
 const reportPath = program.reportPath
 const testEnvPath = program.testEnvPath
 const reportUrl = program.reportUrl
@@ -44,31 +51,48 @@ if (program.verbose) {
 	)
 }
 
-;(async () => {
+; (async () => {
 	let webhookArgs
-	try {
-		webhookArgs = await readAllureReport(reportPath, testEnvPath)
-	} catch (error) {
-		error.name
-			? console.error(
+	if (reportType == 'allure') {
+		try {
+			webhookArgs = await readAllureReport(reportPath, testEnvPath)
+		} catch (error) {
+			error.name
+				? console.error(
 					`${error.name}: ${error.message}`,
 					'\nFailed to read the Allure report.'
-			  )
-			: console.error(
+				)
+				: console.error(
 					'An unknown error occurred. Failed to read the Allure report.'
-			  )
+				)
+		}
 	}
+	if (reportType == 'mocha') {
+		try {
+			webhookArgs = await readMochaReport(reportPath)
+		} catch (error) {
+			error.name
+				? console.error(
+					`${error.name}: ${error.message}`,
+					'\nFailed to read the Mocha report.'
+				)
+				: console.error(
+					'An unknown error occurred. Failed to read the Mocha report.'
+				)
+		}
+	}
+
 	try {
 		await sendWebhook({ ...webhookArgs, reportUrl })
 		console.log('MS Teams message was sent successfully.')
 	} catch (error) {
 		error.name
 			? console.error(
-					`${error.name}: ${error.message}`,
-					'\nFailed to send MS Teams message.'
-			  )
+				`${error.name}: ${error.message}`,
+				'\nFailed to send MS Teams message.'
+			)
 			: console.error(
-					'An unknown error occurred. Failed to send MS Teams message.'
-			  )
+				'An unknown error occurred. Failed to send MS Teams message.'
+			)
 	}
 })()
